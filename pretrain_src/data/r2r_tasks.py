@@ -83,10 +83,12 @@ class MlmDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
         if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
 
@@ -113,10 +115,12 @@ def mlm_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # history batches
-    batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
     batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-    if 'hist_pano_img_fts' in batch:
-        batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+    if 'hist_pano_img_fts1' in batch:
+        batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
 
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
@@ -181,12 +185,18 @@ class MrcDataset(Dataset):
 
         # prepare history tensor: masked history image
         hist_mrc_masks = _get_img_mask(self.mask_prob, inputs['hist_img_probs'].shape[0])
-        output['hist_img_fts'] = _mask_img_feat(
-            torch.from_numpy(inputs['hist_img_fts']),
+        output['hist_img_fts1'] = _mask_img_feat(
+            torch.from_numpy(inputs['hist_img_fts1']),
             hist_mrc_masks)
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = _mask_pano_img_feat(
-                torch.from_numpy(inputs['hist_pano_img_fts']),
+        output['hist_img_fts2'] = _mask_img_feat(
+            torch.from_numpy(inputs['hist_img_fts2']),
+            hist_mrc_masks)
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = _mask_pano_img_feat(
+                torch.from_numpy(inputs['hist_pano_img_fts1']),
+                hist_mrc_masks)
+            output['hist_pano_img_fts2'] = _mask_pano_img_feat(
+                torch.from_numpy(inputs['hist_pano_img_fts2']),
                 hist_mrc_masks)
 
         output['hist_img_probs'] = torch.from_numpy(inputs['hist_img_probs'])
@@ -209,11 +219,13 @@ def mrc_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # history batches
-    batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
     batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
 
-    if 'hist_pano_img_fts' in batch:
-        batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+    if 'hist_pano_img_fts1' in batch:
+        batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
 
     # labels
@@ -255,11 +267,13 @@ class ItmDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
 
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
 
         output['hist_lens'] = inputs['hist_lens']
@@ -275,10 +289,12 @@ def itm_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # history batches
-    batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
     batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-    if 'hist_pano_img_fts' in batch:
-        batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+    if 'hist_pano_img_fts1' in batch:
+        batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
 
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
@@ -317,10 +333,12 @@ class SapDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare vision tensor
-        output['ob_img_fts'] = torch.from_numpy(inputs['ob_img_fts'])
+        output['ob_img_fts1'] = torch.from_numpy(inputs['ob_img_fts1'])
+        output['ob_img_fts2'] = torch.from_numpy(inputs['ob_img_fts2'])
         v_exists = True
         if random.random() < self.random_kill_v:
-            output['ob_img_fts'][...] = 0
+            output['ob_img_fts1'][...] = 0
+            output['ob_img_fts2'][...] = 0
             v_exists = False
         output['ob_ang_fts'] = torch.from_numpy(inputs['ob_ang_fts'])
         if v_exists and random.random() < self.random_kill_a:
@@ -332,10 +350,12 @@ class SapDataset(Dataset):
         output['ob_action_viewindex'] = inputs['ob_action_viewindex']
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
         return output
@@ -350,7 +370,8 @@ def sap_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # image batches
-    batch['ob_img_fts'] = pad_tensors(batch['ob_img_fts'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts1'] = pad_tensors(batch['ob_img_fts1'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts2'] = pad_tensors(batch['ob_img_fts2'], lens=batch['ob_lens'], pad=0)
     batch['ob_ang_fts'] = pad_tensors(batch['ob_ang_fts'], lens=batch['ob_lens'], pad=0)
     batch['ob_nav_types'] = pad_sequence(batch['ob_nav_types'], batch_first=True, padding_value=0)
     batch['ob_masks'] = torch.BoolTensor(gen_seq_masks(batch['ob_lens']))
@@ -359,16 +380,20 @@ def sap_collate(inputs):
     # history batches
     if max(batch['hist_lens']) == 0:
         # all are in first step
-        batch['hist_img_fts'] = None
+        batch['hist_img_fts1'] = None
+        batch['hist_img_fts2'] = None
         batch['hist_ang_fts'] = None
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = None
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = None
+            batch['hist_pano_img_fts2'] = None
             batch['hist_pano_ang_fts'] = None
     else:
-        batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+            batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
             batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
     batch['hist_masks'] = torch.BoolTensor(gen_seq_masks(batch['hist_lens']))
@@ -410,10 +435,12 @@ class SarDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare vision tensor
-        output['ob_img_fts'] = torch.from_numpy(inputs['ob_img_fts'])
+        output['ob_img_fts1'] = torch.from_numpy(inputs['ob_img_fts1'])
+        output['ob_img_fts2'] = torch.from_numpy(inputs['ob_img_fts2'])
         v_exists = True
         if random.random() < self.random_kill_v:
-            output['ob_img_fts'][...] = 0
+            output['ob_img_fts1'][...] = 0
+            output['ob_img_fts2'][...] = 0
             v_exists = False
         output['ob_ang_fts'] = torch.from_numpy(inputs['ob_ang_fts'])
         if v_exists and random.random() < self.random_kill_a:
@@ -426,10 +453,12 @@ class SarDataset(Dataset):
         output['ob_progress'] = inputs['ob_progress']
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
 
@@ -451,7 +480,8 @@ def sar_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # image batches
-    batch['ob_img_fts'] = pad_tensors(batch['ob_img_fts'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts1'] = pad_tensors(batch['ob_img_fts1'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts2'] = pad_tensors(batch['ob_img_fts2'], lens=batch['ob_lens'], pad=0)
     batch['ob_ang_fts'] = pad_tensors(batch['ob_ang_fts'], lens=batch['ob_lens'], pad=0)
     batch['ob_nav_types'] = pad_sequence(batch['ob_nav_types'], batch_first=True, padding_value=0)
     batch['ob_masks'] = torch.BoolTensor(gen_seq_masks(batch['ob_lens']))
@@ -460,16 +490,20 @@ def sar_collate(inputs):
     # history batches
     if max(batch['hist_lens']) == 0:
         # all are in first step
-        batch['hist_img_fts'] = None
+        batch['hist_img_fts1'] = None
+        batch['hist_img_fts2'] = None
         batch['hist_ang_fts'] = None
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = None
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = None
+            batch['hist_pano_img_fts2'] = None
             batch['hist_pano_ang_fts'] = None
     else:
-        batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+            batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
             batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
     batch['hist_masks'] = torch.BoolTensor(gen_seq_masks(batch['hist_lens']))
@@ -524,10 +558,12 @@ class SprelDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare vision tensor
-        output['ob_img_fts'] = torch.from_numpy(inputs['ob_img_fts'])
+        output['ob_img_fts1'] = torch.from_numpy(inputs['ob_img_fts1'])
+        output['ob_img_fts2'] = torch.from_numpy(inputs['ob_img_fts2'])
         v_exists = True
         if random.random() < self.random_kill_v:
-            output['ob_img_fts'][...] = 0
+            output['ob_img_fts1'][...] = 0
+            output['ob_img_fts2'][...] = 0
             v_exists = False
         output['ob_ang_fts'] = torch.from_numpy(inputs['ob_ang_fts'])
         if v_exists and random.random() < self.random_kill_a:
@@ -536,10 +572,12 @@ class SprelDataset(Dataset):
         output['ob_lens'] = output['ob_img_fts'].size(0)
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
 
@@ -566,7 +604,8 @@ def sprel_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # image batches
-    batch['ob_img_fts'] = pad_tensors(batch['ob_img_fts'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts1'] = pad_tensors(batch['ob_img_fts1'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts2'] = pad_tensors(batch['ob_img_fts2'], lens=batch['ob_lens'], pad=0)
     batch['ob_ang_fts'] = pad_tensors(batch['ob_ang_fts'], lens=batch['ob_lens'], pad=0)
     batch['ob_nav_types'] = pad_sequence(batch['ob_nav_types'], batch_first=True, padding_value=0)
     batch['ob_masks'] = torch.BoolTensor(gen_seq_masks(batch['ob_lens']))
@@ -575,16 +614,20 @@ def sprel_collate(inputs):
     # history batches
     if max(batch['hist_lens']) == 0:
         # all are in first step
-        batch['hist_img_fts'] = None
+        batch['hist_img_fts1'] = None
+        batch['hist_img_fts2'] = None
         batch['hist_ang_fts'] = None
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = None
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = None
+            batch['hist_pano_img_fts2'] = None
             batch['hist_pano_ang_fts'] = None
     else:
-        batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+            batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
             batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
     batch['hist_masks'] = torch.BoolTensor(gen_seq_masks(batch['hist_lens']))
@@ -643,13 +686,19 @@ class MimImageDataset(MrcDataset):
         output['hist_images_dvae'] = torch.from_numpy(inputs['hist_images_dvae'])
 
         if not self.distill:
-            output['hist_img_fts'] = _mask_img_feat(
-            torch.from_numpy(inputs['hist_img_fts']),
+            output['hist_img_fts1'] = _mask_img_feat(
+            torch.from_numpy(inputs['hist_img_fts1']),
+            hist_mrc_masks)
+            output['hist_img_fts2'] = _mask_img_feat(
+            torch.from_numpy(inputs['hist_img_fts2']),
             hist_mrc_masks)
 
-            if 'hist_pano_img_fts' in inputs:
-                output['hist_pano_img_fts'] = _mask_pano_img_feat(
-                    torch.from_numpy(inputs['hist_pano_img_fts']),
+            if 'hist_pano_img_fts1' in inputs:
+                output['hist_pano_img_fts1'] = _mask_pano_img_feat(
+                    torch.from_numpy(inputs['hist_pano_img_fts1']),
+                    hist_mrc_masks)
+                output['hist_pano_img_fts2'] = _mask_pano_img_feat(
+                    torch.from_numpy(inputs['hist_pano_img_fts2']),
                     hist_mrc_masks)
 
         if self.dvae_filter:
@@ -684,8 +733,11 @@ def mim_image_collate(inputs):
         batch["hist_mrc_masks"], batch_first=True, padding_value=0
     )
 
-    batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
-    batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+    batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
+    batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+    batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
+
 
     batch["hist_lens"] = [x + 1 for x in batch["hist_lens"]]  # added a global token
     batch["hist_masks"] = torch.BoolTensor(gen_seq_masks(batch["hist_lens"]))
@@ -729,7 +781,8 @@ class ApwigImageDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare vision tensor
-        output['ob_img_fts'] = torch.from_numpy(inputs['ob_img_fts'])
+        output['ob_img_fts1'] = torch.from_numpy(inputs['ob_img_fts1'])
+        output['ob_img_fts2'] = torch.from_numpy(inputs['ob_img_fts2'])
         output['ob_ang_fts'] = torch.from_numpy(inputs['ob_ang_fts'])
         if random.random() < self.random_kill_a:
             output['ob_ang_fts'][...] = 0
@@ -737,10 +790,12 @@ class ApwigImageDataset(Dataset):
         output['ob_lens'] = output['ob_img_fts'].size(0)
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
 
@@ -764,7 +819,8 @@ def apwig_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # image batches
-    batch['ob_img_fts'] = pad_tensors(batch['ob_img_fts'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts1'] = pad_tensors(batch['ob_img_fts1'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts2'] = pad_tensors(batch['ob_img_fts2'], lens=batch['ob_lens'], pad=0)
     batch['ob_ang_fts'] = pad_tensors(batch['ob_ang_fts'], lens=batch['ob_lens'], pad=0)
     batch['ob_nav_types'] = pad_sequence(batch['ob_nav_types'], batch_first=True, padding_value=0)
     batch['ob_masks'] = torch.BoolTensor(gen_seq_masks(batch['ob_lens']))
@@ -773,16 +829,20 @@ def apwig_collate(inputs):
     # history batches
     if max(batch['hist_lens']) == 0:
         # all are in first step
-        batch['hist_img_fts'] = None
+        batch['hist_img_fts1'] = None
+        batch['hist_img_fts2'] = None
         batch['hist_ang_fts'] = None
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = None
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = None
+            batch['hist_pano_img_fts2'] = None
             batch['hist_pano_ang_fts'] = None
     else:
-        batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+            batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
             batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']]  # added a special token
     batch['hist_masks'] = torch.BoolTensor(gen_seq_masks(batch['hist_lens']))
@@ -825,16 +885,19 @@ class MppDataset(Dataset):
         output['txt_lens'] = output['txt_ids'].size(0)
 
         # prepare vision tensor
-        output['ob_img_fts'] = torch.from_numpy(inputs['ob_img_fts'])
+        output['ob_img_fts1'] = torch.from_numpy(inputs['ob_img_fts1'])
+        output['ob_img_fts2'] = torch.from_numpy(inputs['ob_img_fts2'])
         output['ob_ang_fts'] = torch.from_numpy(inputs['ob_ang_fts'])
         output['ob_nav_types'] = torch.LongTensor(inputs['ob_nav_types'])
         output['ob_lens'] = output['ob_img_fts'].size(0)
 
         # prepare history tensor
-        output['hist_img_fts'] = torch.from_numpy(inputs['hist_img_fts'])
+        output['hist_img_fts1'] = torch.from_numpy(inputs['hist_img_fts1'])
+        output['hist_img_fts2'] = torch.from_numpy(inputs['hist_img_fts2'])
         output['hist_ang_fts'] = torch.from_numpy(inputs['hist_ang_fts'])
-        if 'hist_pano_img_fts' in inputs:
-            output['hist_pano_img_fts'] = torch.from_numpy(inputs['hist_pano_img_fts'])
+        if 'hist_pano_img_fts1' in inputs:
+            output['hist_pano_img_fts1'] = torch.from_numpy(inputs['hist_pano_img_fts1'])
+            output['hist_pano_img_fts2'] = torch.from_numpy(inputs['hist_pano_img_fts2'])
             output['hist_pano_ang_fts'] = torch.from_numpy(inputs['hist_pano_ang_fts'])
         output['hist_lens'] = inputs['hist_lens']
 
@@ -865,7 +928,8 @@ def mpp_collate(inputs):
     batch['txt_lens'] = torch.LongTensor(batch['txt_lens'])
 
     # image batches
-    batch['ob_img_fts'] = pad_tensors(batch['ob_img_fts'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts1'] = pad_tensors(batch['ob_img_fts1'], lens=batch['ob_lens'], pad=0)
+    batch['ob_img_fts2'] = pad_tensors(batch['ob_img_fts2'], lens=batch['ob_lens'], pad=0)
     batch['ob_ang_fts'] = pad_tensors(batch['ob_ang_fts'], lens=batch['ob_lens'], pad=0)
     batch['ob_nav_types'] = pad_sequence(batch['ob_nav_types'], batch_first=True, padding_value=0)
     batch['ob_masks'] = torch.BoolTensor(gen_seq_masks(batch['ob_lens']))
@@ -874,16 +938,20 @@ def mpp_collate(inputs):
     # history batches
     if max(batch['hist_lens']) == 0:
         # all are in first step
-        batch['hist_img_fts'] = None
+        batch['hist_img_fts1'] = None
+        batch['hist_img_fts2'] = None
         batch['hist_ang_fts'] = None
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = None
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = None
+            batch['hist_pano_img_fts2'] = None
             batch['hist_pano_ang_fts'] = None
     else:
-        batch['hist_img_fts'] = pad_tensors(batch['hist_img_fts'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts1'] = pad_tensors(batch['hist_img_fts1'], lens=batch['hist_lens'], pad=0)
+        batch['hist_img_fts2'] = pad_tensors(batch['hist_img_fts2'], lens=batch['hist_lens'], pad=0)
         batch['hist_ang_fts'] = pad_tensors(batch['hist_ang_fts'], lens=batch['hist_lens'], pad=0)
-        if 'hist_pano_img_fts' in batch:
-            batch['hist_pano_img_fts'] = pad_tensors(batch['hist_pano_img_fts'], lens=batch['hist_lens'], pad=0)
+        if 'hist_pano_img_fts1' in batch:
+            batch['hist_pano_img_fts1'] = pad_tensors(batch['hist_pano_img_fts1'], lens=batch['hist_lens'], pad=0)
+            batch['hist_pano_img_fts2'] = pad_tensors(batch['hist_pano_img_fts2'], lens=batch['hist_lens'], pad=0)
             batch['hist_pano_ang_fts'] = pad_tensors(batch['hist_pano_ang_fts'], lens=batch['hist_lens'], pad=0)
     batch['hist_lens'] = [x + 1 for x in batch['hist_lens']] # added a special token
     batch['hist_masks'] = torch.BoolTensor(gen_seq_masks(batch['hist_lens']))

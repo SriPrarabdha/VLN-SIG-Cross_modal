@@ -48,7 +48,7 @@ from model.beit.modeling_discrete_vae import Dalle_VAE
 from data.beit_data import MultiStepNavBeitData
 
 import numpy as np
-
+from pretrain_src.model.cross_modality import CrossModality
 
 
 def create_dataloaders(
@@ -220,6 +220,8 @@ def main(opts):
     model = MultiStepNavCMTPreTraining.from_pretrained(
         pretrained_model_name_or_path=None, config=model_config, state_dict=checkpoint, cache_dir="cache"
     )
+    cross_model = CrossModality()
+    cross_model.train()
     model.train()
     set_dropout(model, opts.dropout)
 
@@ -244,6 +246,7 @@ def main(opts):
     img_db_file = r2r_cfg.img_db_file
     train_nav_db = MultiStepNavBeitData(
         r2r_cfg.train_traj_files, r2r_cfg.img_ft_file,
+        r2r_cfg.blip_ft_file , r2r_cfg.dino_ft_file,
         r2r_cfg.scanvp_cands_file, r2r_cfg.connectivity_dir,
         image_prob_size=model_config.image_prob_size,
         image_feat_size=model_config.image_feat_size,
@@ -257,6 +260,7 @@ def main(opts):
     )
     val_nav_db = MultiStepNavBeitData(
         r2r_cfg.val_seen_traj_files, r2r_cfg.img_ft_file,
+        r2r_cfg.blip_ft_file , r2r_cfg.dino_ft_file,
         r2r_cfg.scanvp_cands_file, r2r_cfg.connectivity_dir,
         image_prob_size=model_config.image_prob_size,
         image_feat_size=model_config.image_feat_size,
@@ -270,6 +274,7 @@ def main(opts):
     )
     val2_nav_db = MultiStepNavBeitData(
         r2r_cfg.val_unseen_traj_files, r2r_cfg.img_ft_file,
+        r2r_cfg.blip_ft_file , r2r_cfg.dino_ft_file,
         r2r_cfg.scanvp_cands_file, r2r_cfg.connectivity_dir,
         image_prob_size=model_config.image_prob_size,
         image_feat_size=model_config.image_feat_size,

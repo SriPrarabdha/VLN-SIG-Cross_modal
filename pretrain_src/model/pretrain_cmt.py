@@ -11,6 +11,7 @@ from transformers import BertPreTrainedModel
 from .vilmodel import BertLayerNorm, BertOnlyMLMHead
 from .vilmodel import NavPreTrainedModel
 
+from .cross_modality import CrossModality
 
 class NextActionPrediction(nn.Module):
     def __init__(self, hidden_size, dropout_rate):
@@ -176,6 +177,8 @@ class MultiStepNavCMTPreTraining(BertPreTrainedModel):
 
         self.config = config
         self.bert = NavPreTrainedModel(config)
+        self.cross_modal = CrossModality()
+        # self.cross_modal.train()
 
         if 'mlm' in config.pretrain_tasks:
             self.mlm_head = BertOnlyMLMHead(self.config)
@@ -217,6 +220,10 @@ class MultiStepNavCMTPreTraining(BertPreTrainedModel):
 
     def forward(self, batch, task, compute_loss=True, d_vae=None, dy_filter=None, pos_input=None):
         batch = defaultdict(lambda: None, batch)
+
+        batch["hist_img_fts"] = self.cross_modal(batch["hist_img_fts1"], batch["hist_img_fts2"])
+        batch["hist_pano_img_fts"] = self.cross_modal(batch["hist_pano_img_fts1"], batch["hist_pano_img_fts2"])
+        batch["ob_img_fts"] = self.cross_modal(batch["ob_img_fts1"], batch["ob_img_fts2"])
         if task.startswith('mlm'):
             return self.forward_mlm(batch['txt_ids'], batch['txt_masks'], 
                                     batch['hist_img_fts'], batch['hist_ang_fts'],

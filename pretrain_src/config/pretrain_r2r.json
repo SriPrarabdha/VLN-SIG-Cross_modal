@@ -40,6 +40,8 @@
             "val_seen_traj_files": ["datasets/R2R/annotations/pretrain/val_seen.jsonl"],
             "val_unseen_traj_files": ["datasets/R2R/annotations/pretrain/val_unseen.jsonl"],
             "img_ft_file": "datasets/R2R/features/vit-16.hdf5",
+            "blip_ft_file":"" , 
+            "dino_ft_file": "", 
             "scanvp_cands_file": "datasets/R2R/annotations/scanvp_candview_relangles.json",
             "connectivity_dir": "datasets/R2R/connectivity",
             "img_db_file": "views_img/",

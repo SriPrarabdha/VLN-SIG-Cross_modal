@@ -125,7 +125,7 @@ def read_img_features(feature_store):
 
 class MultiStepNavBeitData(object):
     def __init__(
-        self, traj_files, img_ft_file, scanvp_cands_file,  connectivity_dir,
+        self, traj_files, img_ft_file, blip_ft_file, dino_ft_file, scanvp_cands_file,  connectivity_dir,
         image_prob_size=1000, image_feat_size=2048, angle_feat_size=4,
         max_txt_len=80, max_act_len=100,
         hist_enc_pano=True, val_sample_num=None,
@@ -134,7 +134,11 @@ class MultiStepNavBeitData(object):
         preprocess=None
     ):
         self.traj_files = traj_files
+        ####
         self.img_ft_file = img_ft_file
+        self.dino_ft_file = dino_ft_file
+        self.blip_ft_file = blip_ft_file
+        #####
         self.img_db_file = img_db_file
         self.image_feat_size = image_feat_size
         self.image_prob_size = image_prob_size
@@ -147,6 +151,8 @@ class MultiStepNavBeitData(object):
         self.in_memory = in_memory
         if self.in_memory:
             self._feature_store = {}
+            self._feature_store1 = {}
+            self._feature_store2 = {}
 
         self.feature_index = 0
 
@@ -206,30 +212,33 @@ class MultiStepNavBeitData(object):
         outs = {
             'instr_id': instr_id,
             'instr_encoding': instr_encoding,
-            'hist_img_fts': hist_inputs[0],
-            'hist_ang_fts': hist_inputs[1],
+            'hist_img_fts1': hist_inputs[0],
+            'hist_img_fts2': hist_inputs[1],
+            'hist_ang_fts': hist_inputs[2],
             'hist_lens': t_cur,
         }
         if self.hist_enc_pano:
-            outs['hist_pano_img_fts'] = hist_inputs[2]
-            outs['hist_pano_ang_fts'] = hist_inputs[3]
+            outs['hist_pano_img_fts1'] = hist_inputs[3]
+            outs['hist_pano_img_fts2'] = hist_inputs[4]
+            outs['hist_pano_ang_fts'] = hist_inputs[5]
         if return_hist_img_probs:
-            outs['hist_img_probs'] = hist_inputs[4]
+            outs['hist_img_probs'] = hist_inputs[-1]
         if d_vae:
-            outs['hist_images_dvae'] = hist_inputs[4]
+            outs['hist_images_dvae'] = hist_inputs[-1]
 
         if return_ob:
             if ob_cand_pano_view is None:
                 ob_cand_pano_view = self.ob_cand_pano_view
             if ob_cand_pano_view:
-                ob_img_feats, ob_ang_feats, ob_nav_types, gt_label, gt_angle = \
+                ob_img_feats1, ob_img_feats2, ob_ang_feats, ob_nav_types, gt_label, gt_angle = \
                     self.get_ob_cand_pano_view(scan, path, path_viewindex, action_viewindex, rel_act_angles, t_cur)
             else:
-                ob_img_feats, ob_ang_feats, ob_nav_types, gt_label, gt_angle = \
+                ob_img_feats1,ob_img_feats2, ob_ang_feats, ob_nav_types, gt_label, gt_angle = \
                     self.get_ob_pano_view(scan, path, path_viewindex, action_viewindex, rel_act_angles, t_cur)
 
             outs.update({
-                'ob_img_fts': ob_img_feats,
+                'ob_img_fts1': ob_img_feats1,
+                'ob_img_fts2': ob_img_feats2,
                 'ob_ang_fts': ob_ang_feats,
                 'ob_nav_types': ob_nav_types,
             })
@@ -271,9 +280,12 @@ class MultiStepNavBeitData(object):
         return outs
 
     def get_ob_pano_view(self, scan, path, path_viewindex, action_viewindex, rel_act_angles, t_cur):
-        ob_img_feats = self.get_image_feature(scan, path[t_cur], pad_stop_token=True)[:, :self.image_feat_size]
+        #####
+        ob_img_feats1 = self.get_image_feature1(scan, path[t_cur], pad_stop_token=True)[:, :self.image_feat_size]
+        ob_img_feats2 = self.get_image_feature2(scan, path[t_cur], pad_stop_token=True)[:, :self.image_feat_size]
+        #####
         ob_ang_feats = self.get_angle_feature(path_viewindex[t_cur], pad_stop_token=True)
-        ob_nav_types = np.zeros((ob_img_feats.shape[0], ), dtype=np.int64)
+        ob_nav_types = np.zeros((ob_img_feats1.shape[0], ), dtype=np.int64)
         ob_nav_types[-1] = 2   # 2 for [STOP]
         ob_nav_cands = self.scanvp_cands['%s_%s'%(scan, path[t_cur])]
         ob_nav_viewindexes = np.array([v[0] for v in ob_nav_cands.values()])
@@ -283,51 +295,61 @@ class MultiStepNavBeitData(object):
             gt_label = action_viewindex[t_cur]
             gt_angle = rel_act_angles[t_cur]
         else: # stop
-            gt_label = ob_img_feats.shape[0] - 1
+            gt_label = ob_img_feats1.shape[0] - 1
             gt_angle = np.zeros((2, ), dtype=np.float32)
 
-        return ob_img_feats, ob_ang_feats, ob_nav_types, gt_label, gt_angle
+        return ob_img_feats1,ob_img_feats2, ob_ang_feats, ob_nav_types, gt_label, gt_angle
 
     def get_ob_cand_pano_view(self, scan, path, path_viewindex, action_viewindex, rel_act_angles, t_cur):
         # 36 pano views
-        ob_img_feats = self.get_image_feature(scan, path[t_cur], pad_stop_token=False)[:, :self.image_feat_size]
+        #######
+        ob_img_feats1 = self.get_image_feature1(scan, path[t_cur], pad_stop_token=False)[:, :self.image_feat_size]
+        ob_img_feats2 = self.get_image_feature2(scan, path[t_cur], pad_stop_token=False)[:, :self.image_feat_size]
+        ########
         ob_ang_feats = self.get_angle_feature(path_viewindex[t_cur], pad_stop_token=False)
 
         # cand views
         ob_nav_cands = self.scanvp_cands['%s_%s'%(scan, path[t_cur])]
-        cand_img_feats, cand_ang_feats = [], []
+        cand_img_feats1, cand_img_feats2, cand_ang_feats = [], [], []
         non_cand_viewidxs = np.ones((36, ), dtype=np.bool)
         gt_label = None
         for k, v in ob_nav_cands.items():
             if t_cur < len(path) - 1 and k == path[t_cur + 1]: # non-stop
-                gt_label = len(cand_img_feats)
+                gt_label = len(cand_img_feats1)
             non_cand_viewidxs[v[0]] = False
-            cand_img_feats.append(ob_img_feats[v[0]])
+            cand_img_feats1.append(ob_img_feats1[v[0]])
+            cand_img_feats2.append(ob_img_feats2[v[0]])
             tmp_angle = self.rel_angles[path_viewindex[t_cur]][v[0]]
             cand_ang_feats.append(
                 angle_feature(tmp_angle[0] + v[2], tmp_angle[1] + v[3], self.angle_feat_size)
             )
-        cand_img_feats = np.stack(cand_img_feats, 0)
+        # cand_img_feats = np.stack(cand_img_feats, 0)
         cand_ang_feats = np.stack(cand_ang_feats, 0)
 
         # non cand views
-        non_cand_img_feats = ob_img_feats[non_cand_viewidxs]
+        #######
+        non_cand_img_feats1 = ob_img_feats1[non_cand_viewidxs]
+        non_cand_img_feats2 = ob_img_feats2[non_cand_viewidxs]
+        ######
         non_cand_ang_feats = ob_ang_feats[non_cand_viewidxs]
 
         # combine
         ob_nav_types = np.array(
-            [1] * len(cand_img_feats) + [2] + [0] * len(non_cand_img_feats)
+            [1] * len(cand_img_feats1) + [2] + [0] * len(non_cand_img_feats1)
         )
-        ob_img_feats = np.concatenate([cand_img_feats, np.zeros((1, self.image_feat_size), dtype=np.float32), non_cand_img_feats], 0)
+        #####
+        ob_img_feats1 = np.concatenate([cand_img_feats1, np.zeros((1, self.image_feat_size), dtype=np.float32), non_cand_img_feats1], 0)
+        ob_img_feats2 = np.concatenate([cand_img_feats2, np.zeros((1, self.image_feat_size), dtype=np.float32), non_cand_img_feats2], 0)
+        ######
         ob_ang_feats = np.concatenate([cand_ang_feats, np.zeros((1, self.angle_feat_size), dtype=np.float32), non_cand_ang_feats], 0)
 
         if gt_label is None:    # stop action
-            gt_label = len(cand_img_feats)
+            gt_label = len(cand_img_feats1)
             gt_angle = np.zeros((2, ), dtype=np.float32)
         else:
             gt_angle = rel_act_angles[t_cur]
 
-        return ob_img_feats, ob_ang_feats, ob_nav_types, gt_label, gt_angle
+        return ob_img_feats1, ob_img_feats2, ob_ang_feats, ob_nav_types, gt_label, gt_angle
 
 
     def get_history_feature(
@@ -335,8 +357,8 @@ class MultiStepNavBeitData(object):
         return_img_probs=False, d_vae=False
     ):
         # get history features before the step t_cur
-        image_feats, angle_feats, image_probs = [], [], []
-        pano_image_feats, pano_angle_feats = [], []
+        image_feats1, image_feats2, angle_feats, image_probs = [], [], [], []
+        pano_image_feats1, pano_image_feats2, pano_angle_feats = [], [], []
         images_dvae = []
         ob_pano_image_feats, ob_pano_angle_feats = [], []
 
@@ -350,27 +372,31 @@ class MultiStepNavBeitData(object):
             else:
                 angle_feats.append(angle_feature(heading, elevation, self.angle_feat_size))
 
-            vp_fts = self.get_image_feature(scan, vp, pad_stop_token=False)
-
-            image_feats.append(vp_fts[viewidx, :self.image_feat_size])
+            vp_fts1 = self.get_image_feature1(scan, vp, pad_stop_token=False)
+            vp_fts2 = self.get_image_feature2(scan, vp, pad_stop_token=False)
+            image_feats1.append(vp_fts1[viewidx, :self.image_feat_size])
+            image_feats2.append(vp_fts2[viewidx, :self.image_feat_size])
 
             if self.hist_enc_pano:
-                pano_image_feats.append(vp_fts[:, :self.image_feat_size])
+                pano_image_feats1.append(vp_fts1[:, :self.image_feat_size])
+                pano_image_feats2.append(vp_fts2[:, :self.image_feat_size])
                 pano_angle_feats.append(self.angle_features[viewidx])
 
             if return_img_probs:
-                image_probs.append(vp_fts[viewidx, self.image_feat_size:])
+                image_probs.append(vp_fts1[viewidx, self.image_feat_size:])
 
             if d_vae:
                 t_image_dvae = self.get_image(scan, vp, viewidx, d_vae)
                 images_dvae.append(t_image_dvae)
 
         if t_cur > 0:
-            image_feats = np.stack(image_feats, 0)
+            image_feats1 = np.stack(image_feats1, 0)
+            image_feats2 = np.stack(image_feats2, 0)
             angle_feats = np.stack(angle_feats)
 
             if self.hist_enc_pano:
-                pano_image_feats = np.stack(pano_image_feats, 0)
+                pano_image_feats1 = np.stack(pano_image_feats1, 0)
+                pano_image_feats2 = np.stack(pano_image_feats2, 0)
                 pano_angle_feats = np.stack(pano_angle_feats, 0)
 
             if return_img_probs:
@@ -380,10 +406,12 @@ class MultiStepNavBeitData(object):
             if d_vae:
                 images_dvae = np.stack(images_dvae, 0)
         else:
-            image_feats = np.zeros((0, self.image_feat_size), dtype=np.float32)
+            image_feats1 = np.zeros((0, self.image_feat_size), dtype=np.float32)
+            image_feats2 = np.zeros((0, self.image_feat_size), dtype=np.float32)
             angle_feats = np.zeros((0, self.angle_feat_size), dtype=np.float32)
             if self.hist_enc_pano:
-                pano_image_feats = np.zeros((0, 36, self.image_feat_size), dtype=np.float32)
+                pano_image_feats1 = np.zeros((0, 36, self.image_feat_size), dtype=np.float32)
+                pano_image_feats2 = np.zeros((0, 36, self.image_feat_size), dtype=np.float32)
                 pano_angle_feats = np.zeros((0, 36, self.angle_feat_size), dtype=np.float32)
             image_probs = np.zeros((0, self.image_prob_size), dtype=np.float32)
 
@@ -391,24 +419,38 @@ class MultiStepNavBeitData(object):
                 images_dvae = np.zeros((0, 3, IMGSIZE, IMGSIZE), dtype=np.float32)
 
         if d_vae:
-            return image_feats, angle_feats, pano_image_feats, pano_angle_feats, images_dvae
+            return image_feats1, image_feats2, angle_feats, pano_image_feats1, pano_angle_feats, pano_angle_feats, images_dvae
 
         if return_img_probs:
-            return image_feats, angle_feats, pano_image_feats, pano_angle_feats, image_probs
+            return image_feats1, image_feats2, angle_feats, pano_image_feats1,pano_image_feats2, pano_angle_feats, image_probs
 
-        return image_feats, angle_feats, pano_image_feats, pano_angle_feats
+        return image_feats1, image_feats2, angle_feats, pano_image_feats1,pano_image_feats2, pano_angle_feats
 
 
-    def get_image_feature(self, scan, viewpoint, pad_stop_token=False):
+    def get_image_feature1(self, scan, viewpoint, pad_stop_token=False):
         key = '%s_%s' % (scan, viewpoint)
-        feature_dict = self._feature_store
+        feature_dict = self._feature_store1
         if self.in_memory and key in feature_dict:
             fts = feature_dict[key]
         else:
-            with h5py.File(self.img_ft_file, 'r') as f:
+            with h5py.File(self.blip_ft_file, 'r') as f:
                 fts = f[key][...].astype(np.float32)
             if self.in_memory:
-                self._feature_store[key] = fts
+                self._feature_store1[key] = fts
+
+        if pad_stop_token:
+            fts = np.vstack([fts, np.zeros((1, fts.shape[-1]), dtype=fts.dtype)])
+        return fts
+    def get_image_feature2(self, scan, viewpoint, pad_stop_token=False):
+        key = '%s_%s' % (scan, viewpoint)
+        feature_dict = self._feature_store2
+        if self.in_memory and key in feature_dict:
+            fts = feature_dict[key]
+        else:
+            with h5py.File(self.dino_ft_file, 'r') as f:
+                fts = f[key][...].astype(np.float32)
+            if self.in_memory:
+                self._feature_store2[key] = fts
 
         if pad_stop_token:
             fts = np.vstack([fts, np.zeros((1, fts.shape[-1]), dtype=fts.dtype)])
